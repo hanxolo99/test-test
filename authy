@@ -1,0 +1,62 @@
+exports.register_user = function(req, res){
+    Appuser.findOne({phone: req.body.phone}).then(function(appuser){
+        if(appuser){
+            return res.status(400).send({phone: "A user has already registered with this phone number"})
+        }else{
+            const number = req.body.phone;
+            client
+            .verify
+            .services('VA3408701ddc93df0791ed394ac2b63e05')
+            .verifications
+            .create({
+                to: number,
+                channel: 'sms',
+                
+            })
+            .then(function(response){
+                if(response){
+                    res.render('enterotp', {
+                        message: 'verification sent',
+                        phone: req.body.phone,
+                        names: req.body.fullname,
+                        response
+                    })
+                    
+                }else{
+                    res.render('userregister')
+                }
+            })
+        }
+    })
+}
+
+exports.verify_otp = function(req, res){
+    const token = req.body.token;
+    client
+    .verify
+    .services('VA3408701ddc93df0791ed394ac2b63e05')
+    .verificationChecks
+    .create({
+        to: req.body.phone,
+        code: token
+    })
+    .then(function(response){
+        if(response.status === "approved"){
+            const newAppuser = new Appuser({
+                phone: req.body.phone,
+                username: req.body.fullname
+            });
+ 
+            newAppuser.save(function(err){
+                if (err){
+                    console.log(err);
+                }else{
+                    res.render('userregister');
+                    console.log('user has been regsitered',{response});
+                }
+            })
+        }else{
+            res.redirect('back');
+        }
+    })
+}
